@@ -10,7 +10,7 @@ from django.core.validators import FileExtensionValidator
 
 ORDINARY_USER, MANAGER, ADMIN = ('ordinary_user', 'manager', 'admin')
 VIA_PHONE, VIA_EMAIL = ('via_phone', 'via_email')
-NEW, CODE_VERIFIED, DONE, PHOTO_STEP = ('new', 'code_verified', 'done', 'photo_step')
+NEW, CODE_VERIFIED, DONE, PHOTO_DONE = ('new', 'code_verified', 'done', 'photo_done')
 PHONE_EXPIRE = 2
 EMAIL_EXPIRE = 5
 
@@ -31,7 +31,7 @@ class User(AbstractUser, BaseModel):
         (NEW, NEW),
         (CODE_VERIFIED, CODE_VERIFIED),
         (DONE, DONE),
-        (PHOTO_STEP, PHOTO_STEP)
+        (PHOTO_DONE, PHOTO_DONE)
     )
 
     user_role = models.CharField(max_length=31, choices=USER_ROLE, default=ORDINARY_USER)

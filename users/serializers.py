@@ -1,6 +1,9 @@
+from django.contrib.auth.password_validation import password_changed, validate_password
+from django.core.validators import FileExtensionValidator
+from django.db.models.fields import return_None
 from rest_framework import serializers
 from .models import User, UserConfirmation, NEW, CODE_VERIFIED, \
-    DONE, PHOTO_STEP, VIA_EMAIL, VIA_PHONE
+    DONE, PHOTO_DONE, VIA_EMAIL, VIA_PHONE
 from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from shared.utility import check_email_or_phone, send_email, send_phone_code
@@ -102,5 +105,95 @@ class SignUPSerializer(serializers.ModelSerializer):
         data.update(instance.token())
 
         return data
-    
+
+class ChangeUserInformation(serializers.Serializer):
+    first_name = serializers.CharField(required= True, write_only=True)
+    last_name = serializers.CharField(required= True, write_only=True)
+    username = serializers.CharField(required=True, write_only=True)
+    password = serializers.CharField(required=True, write_only=True)
+    confirm_password = serializers.CharField(required=True, write_only=True)
+
+    def validate(self, data):
+        password= data.get('password', None)
+        confirm_password = data.get('confirm_password', None)
+        if password != confirm_password:
+            raise ValidationError({
+                "message": 'passwords do not match\nPlease enter same passwords'
+            })
+
+        if password:
+            validate_password(password)
+            validate_password(confirm_password)
+
+        return data
+
+    def validate_username(self, username):
+        if len(username) < 5 or len(username) > 35:
+            raise ValidationError({
+                "message": "username's characters should be between 5 and 35 "
+            })
+
+        if username.isdigit():
+            raise ValidationError({
+                "message": "username should not be entirely numeric"
+            })
+
+        return username
+
+    def validate_first_name(self, first_name):
+        if not isinstance(first_name, str):
+            raise ValidationError({
+                "message": "first name cannot be numeric"
+            })
+
+        temp= first_name.strip(' ')
+        if len(temp) < 2 or len(temp) > 30:
+            raise ValidationError({
+                "message":"please enter correct first name"
+            })
+        return first_name
+
+    def validate_first_name(self, last_name):
+        if not isinstance(last_name, str):
+            raise ValidationError({
+                "message": "last name cannot be numeric"
+            })
+
+        temp= last_name.strip(' ')
+        if len(temp) < 2 or len(temp) > 30:
+            raise ValidationError({
+                "message":"please enter correct last name"
+            })
+
+        return last_name
+
+    def update(self, instance, validated_data):
+
+        instance.first_name = validated_data.get("first_name", instance.first_name)
+        instance.last_name = validated_data.get("last_name", instance.last_name)
+        instance.username = validated_data.get("username", instance.username)
+        instance.password = validated_data.get("password", instance.password)
+
+        if validated_data.get("password"):
+            instance.set_password(validated_data.get("password"))
+
+        if instance.auth_status == CODE_VERIFIED:
+            instance.auth_status = DONE
+
+        return instance
+
+
+
+class ChangeUserPhotoSerializer(serializers.Serializer):
+    photo = serializers.ImageField(validators=[FileExtensionValidator(allowed_extensions=['png', 'jpg', 'jpeg', 'webp', 'heic', 'heif', 'raw'])])
+    def update(self, instance, validated_data):
+        photo = validated_data.get('photo')
+        if photo:
+            instance.photo = photo
+            instance.auth_status = PHOTO_DONE
+            instance.save()
+        return instance
+
+
+
     
